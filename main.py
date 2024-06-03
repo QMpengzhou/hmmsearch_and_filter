@@ -1,8 +1,33 @@
 import argparse
+import subprocess
+import os
 
 
-def search_pipe(ev, op, hf, sdb):
-    print(ev, op, hf, sdb)
+def extract_pipe(ev, op_pf, hf, sdb):
+    arguments = [str(ev), op_pf, hf, sdb]
+    extraction_script_path = "./extraction_script.sh"
+    command = [extraction_script_path] + arguments
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode == 0:
+        print("program executed successfully")
+    else:
+        print("program failed with return code:", result.returncode)
+
+
+def search_pipe(ev, op, hf, sdb):  # run script with hmmsearch
+    if op is not None:
+        output_prefix = op
+    else:
+        output_prefix, _ = os.path.splitext(hf)
+        output_prefix += "_hmmer_search"
+    hmmsearch_script_path = "./hmmsearch_script.sh"
+    arguments = [output_prefix, hf, sdb]
+    command = [hmmsearch_script_path] + arguments
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode == 0:
+        extract_pipe(ev, output_prefix, hf, sdb)
+    else:
+        print("program failed with return code:", result.returncode)
 
 
 # parser commands below
