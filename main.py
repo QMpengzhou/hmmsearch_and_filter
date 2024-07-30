@@ -1,21 +1,27 @@
 import argparse
 import subprocess
 import os
+from counting import counting_pipe
 
 
-def extract_pipe(ev, op_pf, me, hf, sdb):
+def extract_pipe(ev, op_pf, me, c, hf, sdb):
     merged_fasta = "true" if me else "false"
     arguments = [str(ev), op_pf, merged_fasta, hf, sdb]
     extraction_script_path = "./extraction_script.sh"
     command = [extraction_script_path] + arguments
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode == 0:
+        if c:
+            table = counting_pipe(op_pf, hf)
+            hf = hf.split(".")[0]
+            output_file = f"hits_counting_{hf}.tsv"
+            table.to_csv(output_file, sep="\t", index=False)
         print("program executed successfully")
     else:
         print("program failed with return code:", result.returncode)
 
 
-def search_pipe(ev, op, me, hf, sdb):  # run script with hmmsearch
+def search_pipe(ev, op, me, c, hf, sdb):  # run script with hmmsearch
     if op is not None:
         output_prefix = op
     else:
@@ -26,7 +32,7 @@ def search_pipe(ev, op, me, hf, sdb):  # run script with hmmsearch
     command = [hmmsearch_script_path] + arguments
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode == 0:
-        extract_pipe(ev, output_prefix, me, hf, sdb)
+        extract_pipe(ev, output_prefix, me, c, hf, sdb)
     else:
         print("program failed with return code:", result.returncode)
 
@@ -44,6 +50,8 @@ parser_f.add_argument("-o", "--output_prefix", type=str, metavar="", dest="outpu
 parser_f.add_argument("-m", "--merged", action="store_true",
                       help="An optional argument to provide a merged fasta file for further multiple sequence "
                            "alignment.")
+parser_f.add_argument("-c", "--counting", action="store_true",
+                      help="An optional argument to provide a table with hits per species according to their taxonomy")
 parser_f.add_argument("hmmfile", metavar="hmmfile", type=str, help="the query HMM profile")
 parser_f.add_argument("seqdb", metavar="seqdb", type=str,
                       help="the target directory with sequences in fasta format")
@@ -51,4 +59,4 @@ parser_f.add_argument("seqdb", metavar="seqdb", type=str,
 args = parser.parse_args()
 
 if args.command == "search":
-    search_pipe(args.evalue, args.output_prefix, args.merged, args.hmmfile, args.seqdb)
+    search_pipe(args.evalue, args.output_prefix, args.merged, args.counting, args.hmmfile, args.seqdb)
